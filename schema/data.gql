@@ -1,0 +1,54 @@
+# Enumerations: Must be distinctly selectable, groupable, named and countable.
+# Must be relateable to a specific Type (i.e. Criterion)
+# match $e isa enumeration; ($c, $v); $x has identifier $xn;
+# 
+# match $p1 has identifier "Titus Groan"; $p2 has identifier "Fuchsia Groan";
+
+## Data
+
+insert
+
+$e isa Enumeration has name 'AgeRangeType';
+$e has value 'AGE_RANGE_18_24';
+$e has value 'AGE_RANGE_25_34';
+$e has value 'AGE_RANGE_35_44';
+$e has value 'AGE_RANGE_45_54';
+$e has value 'AGE_RANGE_55_64';
+$e has value 'AGE_RANGE_65_UP';
+$e has value 'AGE_RANGE_UNDETERMINED';
+$e has value 'UNKNOWN';
+
+$t isa TargetType has name 'Age';
+$c isa Criteria has name 'AgeRange';
+
+$r (implements: $e, target: $c) isa implementation;
+(targeting: $r, target-type: $t, created_with: 'criterion_id') isa targeting-type;
+
+(targeting-type: $c, enum: $e) isa criterion-type;
+
+criteria-target-mapping sub relationship
+    relates target-criteria;
+    relates criteria-target;
+
+$e isa Enumeration has name 'GenderType';
+$e has value 'GENDER_MALE';
+$e has value 'GENDER_FEMALE';       
+$e has value 'GENDER_UNDETERMINED';
+
+$t isa TargetType has name 'Gender';
+$c isa Criteria has name 'Gender';
+$r (implements: $e, target: $c) isa implementation;
+
+(target-criteria: $c, criteria-target: $t) isa criteria-target-mapping;
+
+transitive-criteria-target-mapping sub rule,
+when {
+    $enum isa Enumeration has name $enumName;
+    (target-criteria: $target, criteria-target: $criteria) isa criteria-target-mapping;
+    $impl (implements: $enum, target: $criteria) isa implementation;
+}
+then {
+    (targeting: $impl, target-type: $target) has created_with 'criterion_id' isa targeting-type;
+};  
+
+##  $r ($e, $c) isa implementation;

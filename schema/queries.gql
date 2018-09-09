@@ -1,0 +1,9 @@
+match
+
+## Given the target type of `name` 'Age', get the Criteria name.
+$c isa Criteria has name $cn;
+$x isa TargetType has name 'Age';
+$r1 (target: $c, implements: $y) isa implementation;
+$r2 (target-type: $x, targeting: $r1) isa targeting-type;
+
+get $cn;

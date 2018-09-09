@@ -1,0 +1,106 @@
+define
+
+## Attributes
+
+# identifiers
+adgroup_id sub attribute, datatype long;
+campaign_id sub attribute, datatype long;
+item_id sub attribute, datatype string;
+criterion_id sub attribute, datatype long;
+
+name sub attribute, datatype string;
+type sub attribute, datatype string;
+value sub attribute, datatype string;
+
+created_with sub attribute, datatype string;
+
+age-range-type sub attribute, datatype string;
+
+## Entities
+
+Enumeration sub entity,
+    has name,
+    has type,
+    has value,
+    plays enum,
+    plays implements;
+
+Mapping sub entity,
+    has nominal,
+    has key
+
+# Intagibles
+
+ProductDimension sub entity;
+
+# Tangibles
+Campaign sub entity,
+    has campaign_id,
+    plays parent;
+
+Adgroup sub entity,
+	plays parent,
+    plays child;
+
+TargetType sub entity,
+    has name,
+    plays target-type;
+    plays target-criteria;
+
+Criteria sub entity,
+    has name,
+    plays target;
+    plays criteria-target;
+
+Criterion sub entity,
+    has criterion_id,
+    has type;
+
+# Criterion
+ProductPartition sub Criterion,
+	plays parent,
+    plays child,
+	plays product-group;
+
+AgeRange sub Criterion,
+    has adgroup_id,
+    has age-range-type;
+
+Product sub entity,
+    has item_id,
+    plays item;
+
+Dimension sub entity;
+
+# Groups of defined knowledge
+
+ContrastSet sub entity;
+
+## Relationships
+
+# relates Criteria data-object with a
+parentship sub relationship,
+    relates parent,
+    relates child;
+
+targeting-type sub relationship,
+    relates targeting,
+    relates target-type,
+    has created_with;
+
+criterion-type sub relationship,
+    relates target-type,
+    relates enum;
+
+implementation sub relationship,
+    relates implements,
+    relates target,
+    plays targeting;
+    
+offer sub relationship,
+	relates item,
+    relates product-group;
+
+criteria-target-mapping sub relationship
+    relates target-criteria,
+    relates criteria-target;

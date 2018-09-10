@@ -32,14 +32,22 @@ criteria-target-mapping sub relationship
 
 $e isa Enumeration has name 'GenderType';
 $e has value 'GENDER_MALE';
-$e has value 'GENDER_FEMALE';       
+$e has value 'GENDER_FEMALE';
 $e has value 'GENDER_UNDETERMINED';
-
+    
 $t isa TargetType has name 'Gender';
-$c isa Criteria has name 'Gender';
-$r (implements: $e, target: $c) isa implementation;
-
+$c isa Criteria has name 'Gender', has implented-as 'GenderType';
 (target-criteria: $c, criteria-target: $t) isa criteria-target-mapping;
+
+infer-implementation sub rule;
+when {
+    $name val $x isa name;
+    $criteria isa Criteria has name $criteria_name, has implemented-as $x;
+    $enum isa Enumeration has name $name;
+}
+then {
+    (implements: $enum, target: $criteria) isa implementation;
+}
 
 transitive-criteria-target-mapping sub rule,
 when {

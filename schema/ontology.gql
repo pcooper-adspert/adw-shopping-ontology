@@ -13,6 +13,7 @@ type sub attribute, datatype string;
 value sub attribute, datatype string;
 
 created_with sub attribute, datatype string;
+implemented-as sub attribute, datatype string;
 
 age-range-type sub attribute, datatype string;
 
@@ -49,6 +50,7 @@ TargetType sub entity,
 
 Criteria sub entity,
     has name,
+    has implented-as,
     plays target;
     plays criteria-target;
 

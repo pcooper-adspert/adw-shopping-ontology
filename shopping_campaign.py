@@ -30,7 +30,7 @@ class ShoppingCampaign(Tree):
     def get_ancestors(self, node, include_root=False):
         root = 1
         ancestors = []
-        while node.identifier != root:           
+        while node.identifier != root:
             if node.identifier == 1:
                 ancestors.append(1)
                 return ancestors
@@ -39,7 +39,7 @@ class ShoppingCampaign(Tree):
                 node = self.get_node(node.parent)
                 if not include_root and node.identifier == 1:
                     continue
-                ancestors.append(node.identifier)       
+                ancestors.append(node.identifier)
 
         return ancestors
 

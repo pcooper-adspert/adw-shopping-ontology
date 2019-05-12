@@ -5,17 +5,16 @@ define
 # identifiers
 adgroup_id sub attribute, datatype long;
 campaign_id sub attribute, datatype long;
-item_id sub attribute, datatype string;
 criterion_id sub attribute, datatype long;
+# product id
+item_id sub attribute, datatype string;
 
 name sub attribute, datatype string;
 type sub attribute, datatype string;
 value sub attribute, datatype string;
 
-created_with sub attribute, datatype string;
-implemented-as sub attribute, datatype string;
-
-age-range-type sub attribute, datatype string;
+# created_with sub attribute, datatype string;
+# implemented-as sub attribute, datatype string;
 
 ## Entities
 
@@ -41,68 +40,89 @@ Campaign sub entity,
 
 Adgroup sub entity,
 	plays parent,
-    plays child;
-
-TargetType sub entity,
-    has name,
-    plays target-type;
-    plays target-criteria;
-
-Criteria sub entity,
-    has name,
-    has implented-as,
-    plays target;
-    plays criteria-target;
+    plays child,
+    plays ad-group;
 
 Criterion sub entity,
     has criterion_id,
-    has type;
+    has Type,
+    plays biddable-criterion;
 
-# Criterion
+# good but over-complicated
+#TargetType sub entity,
+#    has name,
+#    plays target-type;
+#    plays target-criteria;
+
+Dimension sub Criterion;
+
+# Criterion Types
+
+# product partitions are related to their parents explicitly
+# via the parent id, using inference and to their siblings
+# when their parent-id and dimension-type matches (again, inference)
 ProductPartition sub Criterion,
-	plays parent,
-    plays child,
+    has parent-id,
 	plays product-group;
 
-AgeRange sub Criterion,
-    has adgroup_id,
-    has age-range-type;
+# Demographics
+AgeRange sub Dimension,
+    has criterion_id,
+    has value;
 
+ProductDimension sub Dimension is-abstract,
+    has level,
+    plays dimension-type;
+
+ProductType sub ProductDimension;
+ProductBrand sub ProductDimension;
+
+# Non account level entities
 Product sub entity,
     has item_id,
     plays item;
 
-Dimension sub entity;
-
-# Groups of defined knowledge
-
-ContrastSet sub entity;
+# Groups of pre-defined knowledge
 
 ## Relationships
 
-# relates Criteria data-object with a
-parentship sub relationship,
+# relates data-object in a generic parent-child fashion
+parentship sub relationship is-abstract,
     relates parent,
     relates child;
 
-targeting-type sub relationship,
-    relates targeting,
-    relates target-type,
-    has created_with;
+campaign-adgroup sub parentship;
 
-criterion-type sub relationship,
-    relates target-type,
-    relates enum;
+adgroup-criterion sub relationship,
+    relates biddable-criterion,
+    relates adgroup;
 
-implementation sub relationship,
-    relates implements,
-    relates target,
-    plays targeting;
-    
 offer sub relationship,
-	relates item,
-    relates product-group;
+	relates product,
+    relates ad-group;
 
-criteria-target-mapping sub relationship
-    relates target-criteria,
-    relates criteria-target;
+# create product dimension to product partition
+# relationship
+subdivision sub relationship,
+    relates product-group,
+    relates dimension-type;
+
+case-value sub relationship,
+    relates product-group,
+    ... 
+    has value;
+
+#targeting-type sub relationship,
+#    relates targeting,
+#    relates target-type,
+#    has created_with;
+
+#implementation sub relationship,
+#    relates implements,
+#    relates target,
+#    plays targeting;
+
+# again, cool but overcomplicated
+#criteria-target-mapping sub relationship
+#    relates target-criteria,
+#    relates criteria-target;

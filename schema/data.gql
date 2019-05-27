@@ -1,7 +1,8 @@
 # Enumerations: Must be distinctly selectable, groupable, named and countable.
-# Must be relateable to a specific Type (i.e. Criterion)
+# Must also be relateable to a specific Type (i.e. Criterion)
+#
 # match $e isa enumeration; ($c, $v); $x has identifier $xn;
-# 
+#
 # match $p1 has identifier "Titus Groan"; $p2 has identifier "Fuchsia Groan";
 
 ## Data
@@ -24,25 +25,21 @@ $c isa Criteria has name 'AgeRange';
 $r (implements: $e, target: $c) isa implementation;
 (targeting: $r, target-type: $t, created_with: 'criterion_id') isa targeting-type;
 
-(targeting-type: $c, enum: $e) isa criterion-type;
-
-criteria-target-mapping sub relationship
-    relates target-criteria;
-    relates criteria-target;
+(targeting-type: $tt, descriptor: $d) isa criterion-type;
 
 $e isa Enumeration has name 'GenderType';
 $e has value 'GENDER_MALE';
 $e has value 'GENDER_FEMALE';
 $e has value 'GENDER_UNDETERMINED';
-    
+
 $t isa TargetType has name 'Gender';
-$c isa Criteria has name 'Gender', has implented-as 'GenderType';
+$c isa Criteria has name 'Gender', has implemented-as 'GenderType';
 (target-criteria: $c, criteria-target: $t) isa criteria-target-mapping;
 
 infer-implementation sub rule;
 when {
     $name val $x isa name;
-    $criteria isa Criteria has name $criteria_name, has implemented-as $x;
+    $criteria isa Criteria has name $criteria_name, has implemented-as $name;
     $enum isa Enumeration has name $name;
 }
 then {
@@ -57,6 +54,6 @@ when {
 }
 then {
     (targeting: $impl, target-type: $target) has created_with 'criterion_id' isa targeting-type;
-};  
+};
 
 ##  $r ($e, $c) isa implementation;

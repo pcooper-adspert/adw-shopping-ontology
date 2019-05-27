@@ -3,11 +3,11 @@ define
 ## Attributes
 
 # identifiers
-adgroup_id sub attribute, datatype long;
-campaign_id sub attribute, datatype long;
-criterion_id sub attribute, datatype long;
+adgroup-id sub attribute, datatype long;
+campaign-id sub attribute, datatype long;
+criterion-id sub attribute, datatype long;
 # product id
-item_id sub attribute, datatype string;
+item-id sub attribute, datatype string;
 
 name sub attribute, datatype string;
 type sub attribute, datatype string;
@@ -22,12 +22,13 @@ Enumeration sub entity,
     has name,
     has type,
     has value,
-    plays enum,
+    plays descriptor,
     plays implements;
 
 Mapping sub entity,
     has nominal,
-    has key
+    has key,
+    plays descriptor;
 
 # Intagibles
 
@@ -48,13 +49,18 @@ Criterion sub entity,
     has Type,
     plays biddable-criterion;
 
-# good but over-complicated
-#TargetType sub entity,
-#    has name,
-#    plays target-type;
-#    plays target-criteria;
 
-Dimension sub Criterion;
+# meta description of google ads criteria
+
+Criteria sub entity,
+    has name,
+    has implemented-as,
+    plays target;
+
+TargetType sub entity,
+    has name,
+    plays target-type,
+    plays target-criteria;
 
 # Criterion Types
 
@@ -104,25 +110,32 @@ offer sub relationship,
 # create product dimension to product partition
 # relationship
 subdivision sub relationship,
+    relates product-group,  # parent / subdivision node
+    relates dimension-type;  # dimension type segment
+    has dimension-value,  # all dimensions values in subdivision
+    plays segment;  # for case-value relationships
+
+case-value sub relationship,    
     relates product-group,
-    relates dimension-type;
+    relates segment,
+    has dimension-type,
+    has dimension-value;
 
-case-value sub relationship,
-    relates product-group,
-    ... 
-    has value;
-
-#targeting-type sub relationship,
-#    relates targeting,
-#    relates target-type,
-#    has created_with;
-
-#implementation sub relationship,
-#    relates implements,
-#    relates target,
-#    plays targeting;
+targeting-type sub relationship,
+    relates targeting,
+    relates target-type,
+    has created_with;
 
 # again, cool but overcomplicated
-#criteria-target-mapping sub relationship
-#    relates target-criteria,
-#    relates criteria-target;
+criteria-target-mapping sub relationship
+    relates target-criteria,
+    relates criteria-target;
+
+implementation sub relationship,
+    relates implements,
+    relates target,
+    plays targeting;
+
+criterion-type sub relationship,
+    relates targeting-type,
+    relates descriptor;

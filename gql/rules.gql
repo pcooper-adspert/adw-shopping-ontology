@@ -1,0 +1,46 @@
+define
+
+node-heirarchy sub rule,
+  when {
+      $parent isa ProductPartition, has criterion-id $x, has adgroup-id $a-id;
+      $child isa ProductPartition, has parent-id $y, has adgroup-id $a-id;
+      $x == $y;
+  }, then {
+      (parent: $parent, child: $child) isa parent-child;
+  };
+
+node-ajacency sub rule,
+  when {
+    (parent: $p, $x) isa parent-child;
+    (parent: $p, $y) isa parent-child;
+    $x != $y;
+  }, then {
+    ($x, $y) isa siblings;
+  };
+
+adgroup-
+
+#build-subdivisions sub rule,
+#  when {
+#      (parent: $parent, child: $node) isa parent-child;
+#      $node isa ProductPartition, has criterion-id $c-id, has adgroup-id $a-id;
+#      $case-value (product-dimension: $pd, product-partition: $node) isa case-value, has value $dv;
+#      $pd isa ProductDimension, has dimension-type $dt;
+#  }, then {
+#      (parent: $parent, product-partition: $node, dimension-value: $dv) isa subdivision, has dimension-type $dt;
+#  };
+
+#build-subdivisions sub rule,
+#  when {
+#      $x isa ProductPartition, has adgroup-id $a;
+#      $y isa ProductPartition, has adgroup-id $a;
+#      $p isa ProductPartition, has criterion-id $c;
+#      (parent: $p, $x) isa parent-child;
+#      (parent: $p, $y) isa parent-child;
+#      $pd isa ProductDimension, has dimension-type $dt;
+#      (product-dimension: $pd, $x) isa case-value;
+#      (product-dimension: $pd, $y) isa case-value;
+#      $x != $y;
+#  }, then {
+#      ($y, $x) isa subdivision, has dimension-type $dt;
+#  };

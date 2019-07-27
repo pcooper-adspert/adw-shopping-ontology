@@ -1,0 +1,29 @@
+#match
+#$pp isa ProductPartition, has parent-id 413711409820, has adgroup-id 61553961326, has criterion-id $c-id;
+#$pd isa ProductDimension, has dimension-type $dt;
+#$cv (product-partition: $pp, product-dimension: $pd) isa case-value, has value $v;
+#get $c-id, $dt, $v;
+
+match
+$node isa ProductPartition, has parent-id $p-id, has criterion-id $c-id, has adgroup-id $a-id;
+$subdivision (parent: $root, child: $pp) isa parent-child;
+(product-dimension: $pd, product-partition: $pp) isa case-value, has value $dimension-value;
+$pd isa ProductDimension, has dimension-type $dimension-type;
+$pp isa ProductPartition, has criterion-id $criterion-id;
+get $subdivision, $dimension-type, $criterion-id, $dimension-value;
+
+# subdivision
+match
+$node isa ProductPartition, has parent-id $p-id, has criterion-id $c-id, has adgroup-id $a-id;
+$subdivision (parent: $root, child: $pp) isa parent-child;
+(product-dimension: $pd, product-partition: $node) isa case-value, has value $dv;
+$pd isa ProductDimension, has dimension-type $dt;
+get $c-id, $dt, $dv;
+
+match
+(parent: $parent, child: $unit) isa parent-child;
+$unit isa ProductPartition, has partition-type "Unit", has criterion-id $c-id, has parent-id $p-id;
+(product-dimension: $pd, product-partition: $unit) isa case-value, has value $dv;
+$pd isa ProductDimension, has dimension-type $dt;
+get $parent, $unit, $dt, $dv; limit 100;
+

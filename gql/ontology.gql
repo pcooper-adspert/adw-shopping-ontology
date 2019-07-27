@@ -3,18 +3,18 @@ define
 ## Attributes
 
 # identifiers
-adgroup-id sub attribute, datatype long;
 campaign-id sub attribute, datatype long;
+adgroup-id sub attribute, datatype long;
 criterion-id sub attribute, datatype long;
+
 # product id
 item-id sub attribute, datatype string;
 
+# common
 name sub attribute, datatype string;
 type sub attribute, datatype string;
 value sub attribute, datatype string;
-
-# created_with sub attribute, datatype string;
-# implemented-as sub attribute, datatype string;
+status sub attribute, datatype string;
 
 ## Entities
 
@@ -32,7 +32,7 @@ Mapping sub entity,
 
 # Intagibles
 
-ProductDimension sub entity;
+Dimension sub entity is-abstract;
 
 # Tangibles
 Campaign sub entity,
@@ -77,7 +77,7 @@ AgeRange sub Dimension,
     has value;
 
 ProductDimension sub Dimension is-abstract,
-    has level,
+    has subtype,
     plays dimension-type;
 
 ProductType sub ProductDimension;
@@ -97,25 +97,28 @@ parentship sub relationship is-abstract,
     relates parent,
     relates child;
 
+siblings sub relation,
+    relates product-partition;
+
 campaign-adgroup sub parentship;
 
 adgroup-criterion sub relationship,
     relates biddable-criterion,
     relates adgroup;
 
-offer sub relationship,
+offer sub relation,
 	relates product,
     relates ad-group;
 
 # create product dimension to product partition
 # relationship
-subdivision sub relationship,
+subdivision sub relation,
     relates product-group,  # parent / subdivision node
     relates dimension-type;  # dimension type segment
     has dimension-value,  # all dimensions values in subdivision
     plays segment;  # for case-value relationships
 
-case-value sub relationship,    
+case-value sub relationship,
     relates product-group,
     relates segment,
     has dimension-type,

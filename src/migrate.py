@@ -19,6 +19,7 @@ with a ProductGroup mapping:
     product_dimension_type:value
 
 """
+import argparse
 import logging
 from typing import List
 from typing import Tuple
@@ -213,7 +214,7 @@ def import_account_structure(account: Account,
     log.info(
         f'Importing the account structure of {account.account_name_extern}.')
 
-    with GraknClient(uri=f"{GRAKN_SERVER}:48555") as client:
+    with GraknClient(uri=f"{args.host}:48555") as client:
         # client.keyspaces().delete(keyspace=account.account_name)
         with client.session(keyspace=account.account_name) as session:
             load_campaign_data(session, campaign_types, include_paused)
@@ -229,10 +230,16 @@ def import_account_structure(account: Account,
             load_product_data(session, adgroup_ids)
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-a', dest='adspert_id', required=True)
+parser.add_argument('-s', dest='host', default='localhost')
+
+args = parser.parse_args()
+
 if __name__ == '__main__':
     adspert_app.init('scripts', 'development')
     configure_db()
 
-    account = get_account('942440')
+    account = get_account(args.adspert_id)
     dbs.account.setup(account)
     import_account_structure(account, ['SHOPPING'], include_paused=False)

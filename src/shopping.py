@@ -1,3 +1,4 @@
+import argparse
 import logging
 
 from adspert.scripts.utils import get_account
@@ -9,8 +10,6 @@ from grakn.client import Session
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
-
-GRAKN_SERVER = 'localhost'
 
 ROOT_NODE_ID = 293946777986
 
@@ -440,8 +439,13 @@ def apply_shopping_schema(session: Session):
     log.info('Schema Updated')
 
 
-def main(account):
-    with GraknClient(uri=f"{GRAKN_SERVER}:48555") as client:
+parser = argparse.ArgumentParser()
+parser.add_argument('-a', dest='adspert_id', required=True)
+parser.add_argument('-s', dest='host', default='localhost')
+
+
+def main(account, args):
+    with GraknClient(uri=f"{args.host}:48555") as client:
         keyspace = account.account_name
         with client.session(keyspace=keyspace) as session:
             log.info(f'Connected to "{keyspace}"\n')
@@ -451,6 +455,6 @@ def main(account):
 if __name__ == '__main__':
     adspert_app.init('scripts', 'development')
     configure_db()
-    account = get_account('942440')
 
-    main(account)
+    args = parser.parse_args()
+    main(get_account(args.adspert_id), args)

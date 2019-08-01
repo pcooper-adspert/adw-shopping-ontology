@@ -1,9 +1,9 @@
-undefine
+#undefine
 
-transitive-criterion-inclusion sub rule;
-node-heirarchy sub rule;
-transitive-ancestorship sub rule;
-node-ajacency sub rule;
+#transitive-criterion-inclusion sub rule;
+#node-heirarchy sub rule;
+#transitive-ancestorship sub rule;
+#node-adjacency sub rule;"
 
 define
 
@@ -36,7 +36,7 @@ transitive-ancestorship sub rule,
     (ancestor: $a, descedent: $c) isa ancestorship;
   };
 
-node-ajacency sub rule,
+node-adjacency sub rule,
   when {
     (parent: $p, $x) isa parent-child;
     (parent: $p, $y) isa parent-child;

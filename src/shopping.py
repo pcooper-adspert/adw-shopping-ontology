@@ -95,12 +95,12 @@ def parent_child_relationship(session: Session):
         _role('parent', rel, tx)
         _role('child', rel, tx)
 
-        rel.plays(tx.put_role('ancestor'))
-        rel.plays(tx.put_role('descedent'))
-
         rel = _relationship('ancestorship', tx)
         _role('ancestor', rel, tx)
         _role('descedent', rel, tx)
+
+        rel = _relationship('siblings', tx)
+        _role('product-partition', rel, tx)
 
         tx.commit()
 
@@ -396,20 +396,38 @@ def put_entity_product_dimension(session: Session):
     return id
 
 
-def create_product_entity(session: Session):
-    """Product entity."""
+def put_entity_product(session: Session):
+    """Product entity.
+
+    define
+
+    item-id sub attribute, datatype string;
+    title sub attribute, datatype string;
+
+    Product sub entity,
+        has item-id,
+        has title,
+        plays product;
+
+    """
     with session.transaction().write() as tx:
-        tx.query("""
-            define
+        entity = tx.put_entity_type('Product')
+        entity.has(tx.put_attribute_type('item-id', DataType.STRING))
+        entity.has(tx.put_attribute_type('dimension-type', DataType.STRING))
+        # entity.plays(tx.put_role('product'))
 
-            item-id sub attribute, datatype string;
-            title sub attribute, datatype string;
+        id = entity.id
+        label = entity.label()
+        attrs = [a.label() for a in entity.attributes()]
+        roles = [r.label() for r in entity.playing()]
 
-            Product sub entity,
-                has item-id,
-                has title,
-                plays product;""")
         tx.commit()
+
+    log.info(f'Done adding entity {label} {id} '
+             f'with {attrs} '
+             f'playing {roles}')
+
+    return id
 
 
 def apply_shopping_schema(session: Session):
@@ -433,6 +451,7 @@ def apply_shopping_schema(session: Session):
     build_subdivision_relationship(session)
 
     log.info('Creating shopping entities')
+    put_entity_product(session)
     put_entity_product_partition(session)
     put_entity_product_dimension(session)
 

@@ -37,6 +37,7 @@ from adspert.base.app import adspert_app
 from adspert.database.db import configure_db
 from adspert.database.db import dbs
 from grakn.client import GraknClient
+from grakn.client import DataType
 from grakn.client import Session
 
 log = logging.getLogger(__name__)
@@ -198,7 +199,7 @@ def load_product_data(session: Session, adgroup_ids: Tuple = ()):
     ids = []
     for row in q.dicts():
         with session.transaction().write() as tx:
-            attr = tx.put_attribute_type('item-id')
+            attr = tx.put_attribute_type('item-id', DataType.STRING)
             e = tx.put_entity_type('Product').create()
             e.has(attr.create(row['item_id']))
 

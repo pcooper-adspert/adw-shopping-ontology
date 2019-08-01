@@ -187,7 +187,9 @@ def load_product_data(session: Session, adgroup_ids: Tuple = ()):
         AdwordsOffer.item_id,
         ProductDimension.dimension_type,
         ProductDimension.dimension_value)
-    q = q.join(ProductDimension, JOIN.LEFT_OUTER, on=AdwordsOffer.item_id)
+    q = q.join(
+        ProductDimension, JOIN.LEFT_OUTER,
+        on=(AdwordsOffer.item_id == ProductDimension.item_id))
 
     if adgroup_ids:
         q = q.where(AdwordsOffer.adgroup_id.in_(adgroup_ids))

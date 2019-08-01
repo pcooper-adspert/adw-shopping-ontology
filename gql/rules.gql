@@ -1,12 +1,39 @@
+undefine
+
+transitive-criterion-inclusion sub rule;
+node-heirarchy sub rule;
+transitive-ancestorship sub rule;
+node-ajacency sub rule;
+
 define
+
+transitive-criterion-inclusion sub rule,
+  when {
+    $criterion isa Criterion, has criterion-id $c-id, has adgroup-id $a-id;
+    $adgroup isa AdGroup, has adgroup-id $a-id;
+  }, then {
+    (adgroup: $adgroup, biddable-criterion: $criterion) isa adgroup-criterion;
+  };
 
 node-heirarchy sub rule,
   when {
       $parent isa ProductPartition, has criterion-id $x, has adgroup-id $a-id;
       $child isa ProductPartition, has parent-id $y, has adgroup-id $a-id;
       $x == $y;
+      $parent != $child;
   }, then {
       (parent: $parent, child: $child) isa parent-child;
+  };
+
+transitive-ancestorship sub rule,
+  when {
+    (parent: $a, child: $p) isa parent-child;
+    (parent: $p, child: $c) isa parent-child;
+    $a isa ProductPartition;
+    $p isa ProductPartition;
+    $c isa ProductPartition;
+  }, then {
+    (ancestor: $a, descedent: $c) isa ancestorship;
   };
 
 node-ajacency sub rule,
@@ -17,8 +44,6 @@ node-ajacency sub rule,
   }, then {
     ($x, $y) isa siblings;
   };
-
-adgroup-
 
 #build-subdivisions sub rule,
 #  when {

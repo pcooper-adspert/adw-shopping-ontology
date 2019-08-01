@@ -23,10 +23,13 @@ import logging
 from typing import List
 from typing import Tuple
 
+from peewee import JOIN
+
 from adspert.database.models.main import Account
 from adspert.database.models.account import AdGroup
 from adspert.database.models.account import AdwordsOffer
 from adspert.database.models.account import Campaign
+from adspert.database.models.account import ProductDimension
 from adspert.database.models.account import ProductPartition
 from adspert.scripts.utils import get_account
 from adspert.base.app import adspert_app
@@ -181,7 +184,11 @@ def load_product_data(session: Session, adgroup_ids: Tuple = ()):
     """Product Data."""
     q = AdwordsOffer.select(
         AdwordsOffer.adgroup_id,
-        AdwordsOffer.item_id)
+        AdwordsOffer.item_id,
+        ProductDimension.dimension_type,
+        ProductDimension.dimension_value)
+    q = q.join(ProductDimension, JOIN.LEFT_OUTER, on=AdwordsOffer.item_id)
+
     if adgroup_ids:
         q = q.where(AdwordsOffer.adgroup_id.in_(adgroup_ids))
 
@@ -224,6 +231,6 @@ if __name__ == '__main__':
     adspert_app.init('scripts', 'development')
     configure_db()
 
-    account = get_account('406367')
+    account = get_account('942440')
     dbs.account.setup(account)
     import_account_structure(account, ['SHOPPING'], include_paused=False)

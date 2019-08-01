@@ -58,8 +58,8 @@ def adgroup_criterion_relationship(session: Session):
 
     define
 
-    adgroup-criterion sub relationship,
-        relates adgroup;
+    adgroup-criterion sub relation,
+        relates adgroup,
         relates biddable-criterion;
 
     """
@@ -78,11 +78,15 @@ def adgroup_criterion_relationship(session: Session):
 def parent_child_relationship(session: Session):
     """A basic heirarchical relationship.
 
-    parentship sub relationship is-abstract,
-        relates parent,
-        relates child;
+    define
 
-    parent-child sub parentship;
+    parent-child sub relationship,
+        relates parent,
+        relates child,
+
+    ancestorship sub relationship,
+        relates ancestor,
+        relates descedent;
 
     """
     with session.transaction().write() as tx:
@@ -91,6 +95,13 @@ def parent_child_relationship(session: Session):
 
         _role('parent', rel, tx)
         _role('child', rel, tx)
+
+        rel.plays(tx.put_role('ancestor'))
+        rel.plays(tx.put_role('descedent'))
+
+        rel = _relationship('ancestorship', tx)
+        _role('ancestor', rel, tx)
+        _role('descedent', rel, tx)
 
         tx.commit()
 
@@ -135,7 +146,7 @@ def build_subdivision_relationship(session: Session):
         rel.relates(tx.put_role('parent'))
         rel.relates(tx.put_role('dimension-value'))
         rel.relates(tx.put_role('product-partition'))
-        rel.has(tx.put_attribute_type('dimension-type'))
+        rel.has(tx.put_attribute_type('dimension-type', DataType.STRING))
 
         tx.get_schema_concept('value').plays(
             tx.put_role('dimension-value'))
@@ -222,7 +233,7 @@ def put_entity_adgroup(session: Session):
         has aw-adgroup-type,
         plays parent
         plays child
-        plays ad-group;
+        plays adgroup;
 
     """
     with session.transaction().write() as tx:
@@ -268,6 +279,7 @@ def put_abstract_entity_criterion(session: Session):
     crit-key sub attribute, datatype long;
 
     Criterion sub entity is-abstract,
+        has adgroup-id,
         has criterion-id,
         has criterion-name,
         has crit-key,
@@ -279,6 +291,8 @@ def put_abstract_entity_criterion(session: Session):
 
     with session.transaction().write() as tx:
         criterion = tx.put_entity_type('Criterion')
+        criterion.has(
+            tx.put_attribute_type('adgroup-id', DataType.LONG))
         criterion.has(
             tx.put_attribute_type('criterion-id', DataType.LONG))
         criterion.has(
@@ -318,6 +332,8 @@ def put_entity_product_partition(session: Session):
         has partition-type,
         plays product-partition,
         plays parent;
+        plays ancestor,
+        plays descedent;
 
     """
 
@@ -333,6 +349,8 @@ def put_entity_product_partition(session: Session):
 
         partition.plays(tx.get_schema_concept('product-partition'))
         partition.plays(tx.get_schema_concept('parent'))
+        partition.plays(tx.put_role('ancestor'))
+        partition.plays(tx.put_role('descedent'))
 
         id = partition.id
         attrs = [a.label() for a in partition.attributes()]
@@ -433,6 +451,6 @@ def main(account):
 if __name__ == '__main__':
     adspert_app.init('scripts', 'development')
     configure_db()
-    account = get_account('406367')
+    account = get_account('942440')
 
     main(account)

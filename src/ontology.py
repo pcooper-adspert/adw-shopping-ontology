@@ -1,5 +1,8 @@
 import argparse
+import importlib
 import logging
+import pprint
+from collections import deque
 
 from adspert.scripts.utils import get_account
 from adspert.base.app import adspert_app
@@ -8,10 +11,61 @@ from grakn.client import GraknClient
 from grakn.client import DataType
 from grakn.client import Session
 
+from src.schema import SCHEMA_MODULE_MAP
+
+
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 ROOT_NODE_ID = 293946777986
+
+
+def apply_schema(keyspace: str, name: str):
+    to_apply = SCHEMA_MODULE_MAP[name]
+    with GraknClient(uri='localhost:48555') as client:
+        for schema_module in to_apply:
+            schema = importlib.import_module(schema_module)
+
+            log.info(f'Applying Schema `{schema.__name__}`')
+            concepts = schema.create_concepts(client, keyspace)
+
+            # print concept descriptions
+            for concept_name, concept_ids in concepts.items():
+                print(f'{concept_name.title()} descriptions:')
+                deque(map(describe_concept_type, concept_ids), 0)
+
+
+def describe_concept_type(session: Session, concept_id):
+    with session.transaction().read() as tx:
+        concept = tx.get_concept(concept_id)
+
+        if concept.is_thing():
+            concept = concept.type()
+
+        label = concept.label()
+
+        if concept.is_entity_type():
+            thing_type = 'an entity'
+        elif concept.is_attribute_type():
+            thing_type = 'an attribute'
+        elif concept.is_relation_type():
+            thing_type = 'a relation'
+        else:
+            thing_type = 'Unknown'
+
+        keys = [k.label() for k in concept.keys()]
+        attrs = [a.label() for a in concept.attributes()]
+        roles = [r.label() for r in concept.playing()]
+
+        tx.close()
+
+    print(f'{label} with id {concept_id} is {thing_type}')
+    print('Keys: ', end='')
+    pprint.pprint(keys)
+    print('Attributes:')
+    pprint.pprint(attrs)
+    print('Roles:')
+    pprint.pprint(roles)
 
 
 def _relationship(label, tx):
@@ -52,26 +106,7 @@ def put_shopping_attributes(session: Session):
 #############################
 
 
-def adgroup_criterion_relationship(session: Session):
-    """Criterion in AdGroup.
 
-    define
-
-    adgroup-criterion sub relation,
-        relates adgroup,
-        relates biddable-criterion;
-
-    """
-    with session.transaction().write() as tx:
-        rel = _relationship('adgroup-criterion', tx)
-        id = rel.id
-
-        _role('adgroup', rel, tx)
-        _role('biddable-criterion', rel, tx)
-
-        tx.commit()
-
-    return id
 
 
 def parent_child_relationship(session: Session):
@@ -82,6 +117,8 @@ def parent_child_relationship(session: Session):
     parent-child sub relationship,
         relates parent,
         relates child,
+        plays ancestor,
+        plays descendent;
 
     ancestorship sub relationship,
         relates ancestor,
@@ -94,10 +131,12 @@ def parent_child_relationship(session: Session):
 
         _role('parent', rel, tx)
         _role('child', rel, tx)
+        rel.plays(tx.put_role('ancestor'))
+        rel.plays(tx.put_role('descedent'))
 
         rel = _relationship('ancestorship', tx)
         _role('ancestor', rel, tx)
-        _role('descedent', rel, tx)
+        _role('descendent', rel, tx)
 
         rel = _relationship('siblings', tx)
         _role('product-partition', rel, tx)
@@ -215,106 +254,10 @@ def put_entity_campaign(session: Session):
     return id
 
 
-def put_entity_adgroup(session: Session):
-    """AdGroup entity.
-
-    define
-
-    adgroup-id sub attribute, datatype long;
-    adgroup-name sub attribute, datatype string;
-    aw-adgroup-type sub attribute, datatype long;
-
-    AdGroup sub entity,
-        has adgroup-id,
-        has campaign-id,
-        has adgroup-name,
-        has status,
-        has aw-adgroup-type,
-        plays parent
-        plays child
-        plays adgroup;
-
-    """
-    with session.transaction().write() as tx:
-        adgroup = tx.put_entity_type('AdGroup')
-
-        # attributes
-        adgroup.has(
-            tx.put_attribute_type('adgroup-id', DataType.LONG))
-        adgroup.has(
-            tx.put_attribute_type('campaign-id', DataType.LONG))
-        adgroup.has(
-            tx.put_attribute_type('adgroup-name', DataType.STRING))
-        adgroup.has(
-            tx.put_attribute_type('status', DataType.STRING))
-        adgroup.has(
-            tx.put_attribute_type('aw-adgroup-type', DataType.STRING))
-
-        # roles
-        adgroup.plays(tx.put_role('parent'))
-        adgroup.plays(tx.put_role('child'))
-        adgroup.plays(tx.put_role('adgroup'))
-
-        id = adgroup.id
-        attrs = [a.label() for a in adgroup.attributes()]
-        roles = [r.label() for r in adgroup.playing()]
-
-        tx.commit()
-
-    log.info(f'Created entity `Adgroup` with ID: {id} '
-             f'has {attrs} '
-             f'plays {roles}')
-
-    return id
 
 
-def put_abstract_entity_criterion(session: Session):
-    """Criterion entity.
 
-    define
 
-    criterion-id sub attribute, datatype long;
-    criterion-name sub attribute, datatype long;
-    crit-key sub attribute, datatype long;
-
-    Criterion sub entity is-abstract,
-        has adgroup-id,
-        has criterion-id,
-        has criterion-name,
-        has crit-key,
-        has status,
-        plays child,
-        plays biddable-criterion;
-
-    """
-
-    with session.transaction().write() as tx:
-        criterion = tx.put_entity_type('Criterion')
-        criterion.has(
-            tx.put_attribute_type('adgroup-id', DataType.LONG))
-        criterion.has(
-            tx.put_attribute_type('criterion-id', DataType.LONG))
-        criterion.has(
-            tx.put_attribute_type('crit-key', DataType.LONG))
-        criterion.has(
-            tx.put_attribute_type('criterion-name', DataType.STRING))
-        criterion.has(
-            tx.put_attribute_type('status', DataType.STRING))
-        criterion.plays(tx.put_role('child'))
-        criterion.plays(tx.put_role('biddable-criterion'))
-        criterion.is_abstract(True)
-
-        id = criterion.id
-        attrs = [a.label() for a in criterion.attributes()]
-        roles = [r.label() for r in criterion.playing()]
-
-        tx.commit()
-
-    log.info(f'Done adding entity Criterion {id} '
-             f'with {attrs} '
-             f'playing {roles}')
-
-    return id
 
 
 def put_entity_product_partition(session: Session):
@@ -331,8 +274,6 @@ def put_entity_product_partition(session: Session):
         has partition-type,
         plays product-partition,
         plays parent;
-        plays ancestor,
-        plays descedent;
 
     """
 
@@ -348,8 +289,8 @@ def put_entity_product_partition(session: Session):
 
         partition.plays(tx.get_schema_concept('product-partition'))
         partition.plays(tx.get_schema_concept('parent'))
-        partition.plays(tx.put_role('ancestor'))
-        partition.plays(tx.put_role('descedent'))
+        partition.unplay(tx.put_role('ancestor'))
+        partition.unplay(tx.put_role('descedent'))
 
         id = partition.id
         attrs = [a.label() for a in partition.attributes()]

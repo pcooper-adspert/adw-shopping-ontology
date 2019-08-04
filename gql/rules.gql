@@ -1,8 +1,8 @@
-#undefine
+undefine
 
 #transitive-criterion-inclusion sub rule;
 #node-heirarchy sub rule;
-#transitive-ancestorship sub rule;
+transitive-ancestorship sub rule;
 #node-adjacency sub rule;"
 
 define
@@ -27,13 +27,13 @@ node-heirarchy sub rule,
 
 transitive-ancestorship sub rule,
   when {
-    (parent: $a, child: $p) isa parent-child;
-    (parent: $p, child: $c) isa parent-child;
+    $r1 (parent: $a, child: $p) isa parent-child;
+    $r2 (parent: $p, child: $c) isa parent-child;
     $a isa ProductPartition;
     $p isa ProductPartition;
     $c isa ProductPartition;
   }, then {
-    (ancestor: $a, descedent: $c) isa ancestorship;
+    (ancestor: $r1, descedent: $r2) isa ancestorship;
   };
 
 node-adjacency sub rule,

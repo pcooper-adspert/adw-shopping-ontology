@@ -54,9 +54,10 @@ def make_insert_query(label: str, obj: dict):
     return query
 
 
-def load_campaign_data(session,
-                       campaign_types: Tuple,
-                       include_paused: bool):
+def load_campaign_data(
+        session,
+        campaign_types: Tuple,
+        include_paused: bool):
     """"""
     # fetch campaign data from accountdb
     q = Campaign.select(
@@ -65,6 +66,8 @@ def load_campaign_data(session,
             Campaign.aw_campaign_type,
             Campaign.status)
     q = q.where(Campaign.aw_campaign_type.in_(campaign_types))
+    if not include_paused:
+        q = q.where(Campaign.status == 'Active')
 
     with session.transaction().write() as tx:
         entity = tx.get_schema_concept('Campaign')
@@ -77,13 +80,14 @@ def load_campaign_data(session,
                 campaign.has(attr.create(v))
         tx.commit()
 
-    print('Inserted {} campaigns with IDs {} '.format(len(ids), ids))
+    log.info('Inserted {} campaigns with IDs {} '.format(len(ids), ids))
 
 
-def load_adgroup_data(session: Session,
-                      limit: int = 0,
-                      adgroup_types: Tuple = (),
-                      include_paused: bool = False):
+def load_adgroup_data(
+        session: Session,
+        limit: int = 0,
+        adgroup_types: Tuple = (),
+        include_paused: bool = False):
     """Load ad group data from account db."""
     q = AdGroup.select(
         AdGroup.adgroup_id,
@@ -114,7 +118,7 @@ def load_adgroup_data(session: Session,
                     pass
             tx.commit()
 
-    print('Inserted {} adgroups with IDs {} '.format(
+    log.info('Inserted {} adgroups with IDs {} '.format(
         len(ids), ids))
 
 
@@ -207,28 +211,29 @@ def load_product_data(session: Session, adgroup_ids: Tuple = ()):
             tx.commit()
 
 
-def import_account_structure(account: Account,
-                             campaign_types: List[str],
-                             include_paused: bool = False,
-                             include=(), exclude=()):
+def import_account_structure(
+        account: Account,
+        campaign_types: List[str],
+        include_paused: bool = False,
+        include=(), exclude=()):
     """Import Adspert account structure into Grakn keyspace."""
     log.info(
         f'Importing the account structure of {account.account_name_extern}.')
 
     with GraknClient(uri=f"{args.host}:48555") as client:
-        # client.keyspaces().delete(keyspace=account.account_name)
+        client.keyspaces().delete(keyspace=account.account_name)
+
         with client.session(keyspace=account.account_name) as session:
             load_campaign_data(session, campaign_types, include_paused)
-            load_adgroup_data(
-                session, adgroup_types=['SHOPPING_PRODUCT'], limit=2)
+            load_adgroup_data(session)
 
-            with session.transaction().write() as tx:
+            with session.transaction().read() as tx:
                 it = tx.query('match $x isa adgroup-id; get;')
                 adgroup_ids = [ans.value() for ans in it.collect_concepts()]
-                tx.commit()
+                tx.close()
 
-            load_product_partition_data(session, adgroup_ids)
-            load_product_data(session, adgroup_ids)
+            # load_product_partition_data(session, adgroup_ids)
+            # load_product_data(session, adgroup_ids)
 
 
 parser = argparse.ArgumentParser()
@@ -243,4 +248,5 @@ if __name__ == '__main__':
 
     account = get_account(args.adspert_id)
     dbs.account.setup(account)
-    import_account_structure(account, ['SHOPPING'], include_paused=False)
+
+    import_account_structure(account, include_paused=False)

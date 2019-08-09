@@ -1,11 +1,12 @@
 from enum import Enum
-import treelib
+from treelib import Node, Tree
 
 SPLIT_THRESHOLD = 500
 
-class ShoppingCampaignNode(treelib.Node):
 
-    class NodeType(Enum):
+class ShoppingCampaignNode(Node):
+
+    class NodeType(str, Enum):
         CATEGORY = 'category'
         BRAND = 'brand'
         COLOR = 'color'
@@ -13,8 +14,6 @@ class ShoppingCampaignNode(treelib.Node):
         PRODUCT = 'product'
         GENDER = 'gender'
 
-
-    is_segment = False
     node_type = NodeType.PRODUCT
     clicks = 0
 
@@ -24,4 +23,3 @@ class ShoppingCampaignNode(treelib.Node):
     def factory(self, payload):
         for k, v in payload.iteritems():
             setattr(self, k, v)
-    

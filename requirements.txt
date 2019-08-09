@@ -1,5 +1,5 @@
 # Editable install with no version control (adspert==1)
--e /Users/paulcooper/Development/adspert/src
+-e /mnt/dev/code/adspert
 amqp==2.5.0
 asn1crypto==0.24.0
 Babel==2.7.0
@@ -23,7 +23,7 @@ kombu==4.6.3
 peewee==3.9.6
 protobuf==3.6.1
 psutil==5.6.3
-psycopg2==2.8.3
+psycopg2-binary==2.8.3
 py-dateutil==2.2
 pycparser==2.19
 pyOpenSSL==19.0.0

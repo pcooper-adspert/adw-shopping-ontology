@@ -58,7 +58,7 @@ def load_campaign_data(
         session,
         campaign_types: Tuple,
         include_paused: bool):
-    """"""
+    """."""
     # fetch campaign data from accountdb
     q = Campaign.select(
             Campaign.campaign_id,
@@ -66,8 +66,11 @@ def load_campaign_data(
             Campaign.aw_campaign_type,
             Campaign.status)
     q = q.where(Campaign.aw_campaign_type.in_(campaign_types))
+
     if not include_paused:
         q = q.where(Campaign.status == 'Active')
+    else:
+        q = q.where(Campaign.status == 'Deleted')
 
     with session.transaction().write() as tx:
         entity = tx.get_schema_concept('Campaign')
@@ -80,7 +83,7 @@ def load_campaign_data(
                 campaign.has(attr.create(v))
         tx.commit()
 
-    log.info('Inserted {} campaigns with IDs {} '.format(len(ids), ids))
+    log.info('Inserted {} campaigns.'.format(len(ids)))
 
 
 def load_adgroup_data(
@@ -118,8 +121,7 @@ def load_adgroup_data(
                     pass
             tx.commit()
 
-    log.info('Inserted {} adgroups with IDs {} '.format(
-        len(ids), ids))
+    log.info('Inserted {} Ad Groups.'.format(len(ids)))
 
 
 def load_product_partition_data(
@@ -169,7 +171,7 @@ def load_product_partition_data(
                     pd = tx.get_schema_concept('ProductDimension').create()
                     pd.has(tx.get_schema_concept('dimension-type').create(dt))
 
-                dv = tx.get_schema_concept('value').create(dv)
+                dv = tx.get_schema_concept('dimension-value').create(dv)
 
                 cv = tx.get_schema_concept('case-value').create()
                 cv.has(dv)
@@ -181,9 +183,7 @@ def load_product_partition_data(
         query = '\n'.join(inserts)
         print(query)
 
-    print(
-        'Inserted {} partitions with IDs {} '.format(
-            len(ids), ids))
+    log.info('Inserted {} Product Partitions.'.format(len(ids)))
 
 
 def load_product_data(session: Session, adgroup_ids: Tuple = ()):
@@ -211,9 +211,14 @@ def load_product_data(session: Session, adgroup_ids: Tuple = ()):
             tx.commit()
 
 
+# ----------------------------------------------------------------------------
+# Public Functions
+# ----------------------------------------------------------------------------
+
 def import_account_structure(
         account: Account,
-        campaign_types: List[str],
+        campaign_types: List[str] = None,
+        adgroup_types: List[str] = None,
         include_paused: bool = False,
         include=(), exclude=()):
     """Import Adspert account structure into Grakn keyspace."""
@@ -221,24 +226,40 @@ def import_account_structure(
         f'Importing the account structure of {account.account_name_extern}.')
 
     with GraknClient(uri=f"{args.host}:48555") as client:
-        client.keyspaces().delete(keyspace=account.account_name)
-
         with client.session(keyspace=account.account_name) as session:
             load_campaign_data(session, campaign_types, include_paused)
-            load_adgroup_data(session)
+            load_adgroup_data(session, adgroup_types, include_paused)
 
+            """
             with session.transaction().read() as tx:
                 it = tx.query('match $x isa adgroup-id; get;')
                 adgroup_ids = [ans.value() for ans in it.collect_concepts()]
-                tx.close()
 
-            # load_product_partition_data(session, adgroup_ids)
-            # load_product_data(session, adgroup_ids)
+                tx.close()
+            """
+
+
+def import_shopping_criterion_structure(account: Account):
+    """Import shopping criterion (product partition)."""
+    log.info(
+        'Importing the shopping criterion structure of '
+        f'{account.account_name_extern}.')
+
+    with GraknClient(uri=f"{args.host}:48555") as client:
+        with client.session(keyspace=account.account_name) as session:
+            load_product_partition_data(session)
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-a', dest='adspert_id', required=True)
 parser.add_argument('-s', dest='host', default='localhost')
+
+parser.add_argument('--campaign-types', dest='campaign_types', nargs='*')
+parser.add_argument('--adgroup-types', dest='adgroup_types', nargs='*')
+
+actions = parser.add_mutually_exclusive_group(required=True)
+actions.add_argument('--account', action='store_true')
+actions.add_argument('--shopping', action='store_true')
 
 args = parser.parse_args()
 
@@ -249,4 +270,12 @@ if __name__ == '__main__':
     account = get_account(args.adspert_id)
     dbs.account.setup(account)
 
-    import_account_structure(account, include_paused=False)
+    if args.account:
+        import_account_structure(
+            account,
+            campaign_types=args.campaign_types,
+            adgroup_types=args.adgroup_types,
+            include_paused=False)
+
+    if args.shopping:
+        import_shopping_criterion_structure(account)

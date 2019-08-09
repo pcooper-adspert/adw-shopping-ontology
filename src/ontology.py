@@ -1,17 +1,17 @@
 import argparse
-import importlib
+import functools
 import logging
 import pprint
 from collections import deque
 
-#from adspert.scripts.utils import get_account
-#from adspert.base.app import adspert_app
-#from adspert.database.db import configure_db
+# from adspert.scripts.utils import get_account
+# from adspert.base.app import adspert_app
+# from adspert.database.db import configure_db
 from grakn.client import GraknClient
 from grakn.client import DataType
 from grakn.client import Session
 
-from src.schema import SCHEMA_MODULE_MAP
+import schema
 
 
 log = logging.getLogger(__name__)
@@ -21,18 +21,22 @@ ROOT_NODE_ID = 293946777986
 
 
 def apply_schema(keyspace: str, name: str):
-    to_apply = SCHEMA_MODULE_MAP[name]
+    to_apply = schema.SCHEMA_MODULE_MAP[name]
     with GraknClient(uri='localhost:48555') as client:
         for schema_module in to_apply:
-            schema = importlib.import_module('src.schema.' + schema_module)
+            # mod = importlib.import_module(schema_module)
 
-            log.info(f'Applying Schema `{schema.__name__}`')
-            concepts = schema.create_concepts(client, keyspace)
+            log.info(f'Applying Schema `{schema_module.__name__}`')
+            concepts = schema_module.create_concepts(client, keyspace)
 
             # print concept descriptions
             for concept_name, concept_ids in concepts.items():
-                print(f'{concept_name.title()} descriptions:')
-                deque(map(describe_concept_type, concept_ids), 0)
+                print(f'\n{concept_name.title()}:')
+
+                with client.session(keyspace=keyspace) as session:
+                    partial = functools.partial(
+                        describe_concept_type, session)
+                    deque(map(partial, concept_ids), 0)
 
         log.info('Schema Updated')
 
@@ -52,22 +56,40 @@ def describe_concept_type(session: Session, concept_id):
             thing_type = 'an attribute'
         elif concept.is_relation_type():
             thing_type = 'a relation'
+        elif concept.is_rule():
+            thing_type = 'an inference rule'
         else:
             thing_type = 'Unknown'
 
-        keys = [k.label() for k in concept.keys()]
-        attrs = [a.label() for a in concept.attributes()]
-        roles = [r.label() for r in concept.playing()]
+        attrs = keys = roles = []
+        if hasattr(concept, 'keys'):
+            keys = [k.label() for k in concept.keys()]
+        if hasattr(concept, 'attributes'):
+            attrs = [a.label() for a in concept.attributes()]
+        if hasattr(concept, 'playing'):
+            roles = [r.label() for r in concept.playing()
+                     if not r.label().startswith('@')]
+
+        print(f'\n{label} with id {concept_id} is {thing_type}')
+
+        if concept.is_rule():
+            print('\nRule definition:')
+            print(f'\twhen: {concept.get_when()}')
+            print(f'\tthen: {concept.get_then()}\n\n')
+        else:
+            if keys:
+                print('\nKeys: ', end='')
+                pprint.pprint(keys)
+
+            print('\nAttributes: ', end='')
+            fattrs = '\n' + pprint.pformat(attrs) if attrs else 'None'
+            print(fattrs)
+
+            print('Roles: ', end='')
+            froles = '\n' + pprint.pformat(roles) if roles else 'None'
+            print(froles, end='\n' + str('-' * 79)+ '\n')
 
         tx.close()
-
-    print(f'{label} with id {concept_id} is {thing_type}')
-    print('Keys: ', end='')
-    pprint.pprint(keys)
-    print('Attributes:')
-    pprint.pprint(attrs)
-    print('Roles:')
-    pprint.pprint(roles)
 
 
 def _relationship(label, tx):

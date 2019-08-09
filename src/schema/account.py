@@ -15,11 +15,19 @@ log.setLevel(logging.DEBUG)
 def create_concepts(client: GraknClient, keyspace):
     log.info(f'Creating `account` concepts on "{keyspace}"\n')
     with client.session(keyspace=keyspace) as session:
+        relations = [
+            define_campaign_adgroup_relation(session),
+            define_adgroup_criterion_relation(session),
+        ]
         entities = [
             define_campaign_entity(session),
+            define_adgroup_entity(session),
+            define_abstract_criterion_entity(session),
         ]
-        relations = []
-        rules = []
+        rules = [
+            define_adgroup_in_campaign_rule(session),
+            define_criterion_in_adgroup_rule(session),
+        ]
 
     return {'entities': entities, 'relations': relations, 'rules': rules}
 
@@ -50,8 +58,7 @@ def define_campaign_entity(session: Session):
 
         # attributes
         entity.has(tx.put_attribute_type(
-            'campaign-id',
-            DataType.LONG))
+            'campaign-id', DataType.LONG))
         entity.has(tx.put_attribute_type(
             'campaign-name',
             DataType.STRING))
@@ -178,8 +185,8 @@ def define_campaign_adgroup_relation(session: Session):
         rel = tx.put_relation_type('campaign-adgroup')
         id = rel.id
 
-        rel.plays(tx.put_role('campaign'))
-        rel.plays(tx.put_role('adgroup'))
+        rel.relates(tx.put_role('campaign'))
+        rel.relates(tx.put_role('adgroup'))
 
         tx.commit()
 
@@ -200,8 +207,8 @@ def define_adgroup_criterion_relation(session: Session):
         rel = tx.put_relation_type('adgroup-criterion')
         id = rel.id
 
-        rel.plays(tx.put_role('adgroup'))
-        rel.plays(tx.put_role('biddable-criterion'))
+        rel.relates(tx.put_role('adgroup'))
+        rel.relates(tx.put_role('biddable-criterion'))
 
         tx.commit()
 
@@ -214,14 +221,23 @@ def define_adgroup_criterion_relation(session: Session):
 
 def define_adgroup_in_campaign_rule(session: Session):
     """Infer campaign-adgroup relations via matching campaign-id."""
-    with session.transaction().write() as tx:
-        when = """
-            $campaign isa Campaign, has campaign-id $campaign-id;
-            $adgroup isa AdGroup, has campaign-id $campaign-id;
-        """
-        then = '(campaign: $campaign, adgroup: $adgroup) isa campaign-adgroup;'
+    q = """define
+    adgroup-in-campaign sub rule,
+    when {
+      $c isa Campaign, has campaign-id $c-id;
+      $a isa AdGroup, has campaign-id $c-id;
+    }, then {
+      (campaign: $c, adgroup: $a) isa campaign-adgroup;
+    };"""
 
-        rule = tx.put_rule('adgroup-in-campaign', when, then)
+    with session.transaction().write() as tx:
+        when = ('$c isa Campaign, has campaign-id $c-id; '
+                '$a isa AdGroup, has campaign-id $c-id;')
+
+        then = '(campaign: $c, adgroup: $a) isa campaign-adgroup;'
+
+        tx.query(q)
+        rule = tx.get_schema_concept('adgroup-in-campaign')
         id = rule.id
 
         tx.commit()
@@ -231,16 +247,23 @@ def define_adgroup_in_campaign_rule(session: Session):
 
 def define_criterion_in_adgroup_rule(session: Session):
     """Infer adgroup-criterion relations via matching adgroup-id."""
+    q = """define
+    criterion-in-adgroup sub rule,
+    when {
+      $a isa AdGroup, has adgroup-id $a-id;
+      $c isa Criterion, has adgroup-id $a-id;
+    }, then {
+      (adgroup: $a, biddable-criterion: $c) isa adgroup-criterion;
+    };"""
     with session.transaction().write() as tx:
-        when = """
-            $adgroup isa AdGroup, has adgroup-id $adgroup-id;
-            $criterion isa Criterion, has adgroup-id $adgroup-id;
-        """
+        when = ('$adgroup isa AdGroup, has adgroup-id $adgroup-id; '
+                '$criterion isa Criterion, has adgroup-id $adgroup-id;')
 
         then = ('(adgroup: $adgroup, biddable-criterion: $criterion) '
                 'isa campaign-adgroup;')
 
-        rule = tx.put_rule('criterion-in-adgroup', when, then)
+        tx.query(q)
+        rule = tx.get_schema_concept('adgroup-in-campaign')
         id = rule.id
 
         tx.commit()

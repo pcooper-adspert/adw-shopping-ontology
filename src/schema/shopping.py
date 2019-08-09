@@ -14,18 +14,18 @@ log.setLevel(logging.DEBUG)
 def create_concepts(client: GraknClient, keyspace):
     log.info(f'Creating `account` concepts on "{keyspace}"\n')
     with client.session(keyspace=keyspace) as session:
-        entities = [
-            define_product_partition_entity(session),
-            define_entity_product_dimension(session),
-            define_entity_product(session),
-        ]
         relations = [
-            define_node_heirarchy_relation(session),
             define_ancestorship_relation(session),
+            define_node_heirarchy_relation(session),
             define_sibling_relation(session),
             define_offer_relationship(session),
             define_case_value_relation(session),
             # define_subdivision_relation(session), WIP still
+        ]
+        entities = [
+            define_product_partition_entity(session),
+            define_entity_product_dimension(session),
+            define_entity_product(session),
         ]
         rules = [
             define_infer_node_hierarchy_rule(session),
@@ -64,7 +64,7 @@ def define_product_partition_entity(session: Session):
             'adgroup-id', DataType.LONG))
         ent.has(tx.put_attribute_type(
             'parent-id', DataType.LONG))
-        ent.has( tx.put_attribute_type(
+        ent.has(tx.put_attribute_type(
             'partition-type', DataType.STRING))
 
         ent.plays(tx.put_role('product-partition'))
@@ -72,7 +72,7 @@ def define_product_partition_entity(session: Session):
         ent.plays(tx.put_role('child-node'))
 
         id = ent.id
-        
+
         tx.commit()
 
     return id
@@ -157,10 +157,9 @@ def define_node_heirarchy_relation(session: Session):
 
         rel.relates(tx.put_role('parent-node'))
         rel.relates(tx.put_role('child-node'))
+
         rel.plays(tx.put_role('ancestor'))
         rel.plays(tx.put_role('descedent'))
-
-        
 
         tx.commit()
 
@@ -201,7 +200,7 @@ def define_offer_relationship(session: Session):
         relates product,
         relates ad-group;
     """
-    with session.transaction.write() as tx:
+    with session.transaction().write() as tx:
         tx.query(q)
         id = tx.get_schema_concept('product-offer').id
 
@@ -227,7 +226,7 @@ def define_case_value_relation(session: Session):
         rel = tx.put_relation_type('case-value')
         id = rel.id
 
-        rel.has(tx.put_attribute_type('dimension-value'))
+        rel.has(tx.put_attribute_type('dimension-value', DataType.STRING))
 
         rel.relates(tx.put_role('product-dimension'))
         rel.relates(tx.put_role('product-partition'))
@@ -244,7 +243,7 @@ def define_subdivision_relation(session: Session):
         rel = tx.put_relation_type('subdivision')
         rel.relates(tx.put_role('parent'))
         rel.relates(tx.put_role('dimension-value'))
-        rel.relates(tx.put_role('product-partition'))
+        # rel.relates(tx.put_role('product-partition'))
         rel.has(tx.put_attribute_type('dimension-type', DataType.STRING))
 
         tx.get_schema_concept('value').plays(
@@ -272,7 +271,7 @@ def define_infer_node_hierarchy_rule(session: Session):
       (parent-node: $parent, child-node: $child) isa node-heirarchy;
     };
     """
-    with session.transaction.write() as tx:
+    with session.transaction().write() as tx:
         tx.query(q)
         id = tx.get_schema_concept('infer-node-heirarchy').id
 
@@ -293,7 +292,7 @@ def define_transitive_ancestorship_rule(session: Session):
     }, then {
       (ancestor: $r1, descedent: $r2) isa ancestorship;
     };"""
-    with session.transaction.write() as tx:
+    with session.transaction().write() as tx:
         tx.query(q)
         id = tx.get_schema_concept('transitive-ancestorship').id
 
@@ -306,14 +305,16 @@ def define_node_adjacency_rule(session: Session):
     q = """define
     node-adjacency sub rule,
     when {
-      (parent: $p, $x) isa parent-child;
-      (parent: $p, $y) isa parent-child;
+      (parent-node: $p, $x) isa node-heirarchy;
+      (parent-node: $p, $y) isa node-heirarchy;
       $x != $y;
     }, then {
       ($x, $y) isa siblings;
     };"""
-    with session.transaction.write() as tx:
+    with session.transaction().write() as tx:
         tx.query(q)
         id = tx.get_schema_concept('node-adjacency').id
 
         tx.commit()
+
+    return id
